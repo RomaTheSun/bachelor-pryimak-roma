@@ -1,0 +1,23 @@
+{
+  "name": "military-back-end",
+  "version": "1.0.0",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "node app.js",
+    "dev": "nodemon app.js"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "description": "",
+  "dependencies": {
+    "@supabase/supabase-js": "^2.46.1",
+    "dotenv": "^16.4.5",
+    "express": "^4.21.1",
+    "jsonwebtoken": "^9.0.2"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.7"
+  }
+}
