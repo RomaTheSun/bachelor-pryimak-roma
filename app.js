@@ -182,6 +182,54 @@ app.get('/profession-test/:testId', authenticateToken, async (req, res) => {
     }
 });
 
+// Create a new profession test
+app.post('/profession-tests', authenticateToken, async (req, res) => {
+    const { title, description } = req.body;
+
+    try {
+        const { data, error } = await supabase
+            .from('profession_tests')
+            .insert([{ title, description }])
+            .select();
+
+        if (error) throw error;
+
+        res.status(201).json(data[0]);
+    } catch (error) {
+        res.status(400).json({ error: error.message });
+    }
+});
+
+// Add a question to a profession test
+app.post('/profession-tests/:testId/questions', authenticateToken, async (req, res) => {
+    const { testId } = req.params;
+    const { question, options } = req.body;
+
+    try {
+        // First, check if the test exists
+        const { data: testData, error: testError } = await supabase
+            .from('profession_tests')
+            .select('id')
+            .eq('id', testId)
+            .single();
+
+        if (testError) throw testError;
+        if (!testData) throw new Error('Test not found');
+
+        // If the test exists, add the question
+        const { data, error } = await supabase
+            .from('profession_test_questions')
+            .insert([{ test_id: testId, question, options }])
+            .select();
+
+        if (error) throw error;
+
+        res.status(201).json(data[0]);
+    } catch (error) {
+        res.status(400).json({ error: error.message });
+    }
+});
+
 app.get('/', (req, res) => {
     res.send('Welcome to your Express App!');
 });
