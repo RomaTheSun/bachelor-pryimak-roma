@@ -30,8 +30,6 @@ const authenticateToken = (req, res, next) => {
 };
 
 // User registration
-// User registration
-// User registration
 app.post('/register', async (req, res) => {
     const { email, password, nickname } = req.body;
 
