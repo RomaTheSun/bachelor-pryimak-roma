@@ -284,6 +284,38 @@ app.get('/profession-tests/:id/questions', authenticateToken, async (req, res) =
     }
 });
 
+app.post('/forgot-password', async (req, res) => {
+    const { email } = req.body;
+
+    try {
+        const { data, error } = await supabase.auth.resetPasswordForEmail(email, {
+            redirectTo: 'http://localhost:3000/reset-password',
+        });
+
+        if (error) throw error;
+
+        res.json({ message: 'Password reset email sent successfully' });
+    } catch (error) {
+        res.status(400).json({ error: error.message });
+    }
+});
+
+app.post('/reset-password', async (req, res) => {
+    const { new_password } = req.body;
+
+    try {
+        const { data, error } = await supabase.auth.updateUser({
+            password: new_password
+        });
+
+        if (error) throw error;
+
+        res.json({ message: 'Password updated successfully' });
+    } catch (error) {
+        res.status(400).json({ error: error.message });
+    }
+});
+
 app.get('/', (req, res) => {
     res.send('Welcome to your Express App!');
 });
