@@ -2,10 +2,12 @@ const express = require('express');
 require('dotenv').config();
 const { createClient } = require('@supabase/supabase-js');
 const jwt = require('jsonwebtoken');
+const cors = require('cors');
 
 const app = express();
 const port = 3000;
 
+app.use(cors());
 app.use(express.json());
 
 const supabaseUrl = process.env.SUPABASE_URL;
@@ -31,7 +33,7 @@ const authenticateToken = (req, res, next) => {
 
 // User registration
 app.post('/register', async (req, res) => {
-    const { email, password, nickname } = req.body;
+    const { email, password, nickname, birth_date } = req.body;
 
     try {
         // Sign up the user using Supabase Auth
@@ -49,7 +51,8 @@ app.post('/register', async (req, res) => {
                 {
                     id: authData.user.id,
                     email,
-                    nickname
+                    nickname,
+                    birth_date
                 }
             ]);
 
