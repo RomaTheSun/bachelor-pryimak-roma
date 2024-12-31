@@ -84,6 +84,19 @@ app.post('/login', async (req, res) => {
     }
 });
 
+// User sign-out
+app.post('/signout', authenticateToken, async (req, res) => {
+    try {
+        const { error } = await supabase.auth.signOut();
+
+        if (error) throw error;
+
+        res.json({ message: 'Sign out successful' });
+    } catch (error) {
+        res.status(400).json({ error: error.message });
+    }
+});
+
 // Refresh token
 app.post('/refresh-token', (req, res) => {
     const { refreshToken } = req.body;
