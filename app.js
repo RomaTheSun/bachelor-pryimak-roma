@@ -161,6 +161,21 @@ app.get('/user/progress', authenticateToken, async (req, res) => {
     }
 });
 
+// Update user nickname
+app.put("/user/nickname", authenticateToken, async (req, res) => {
+    const { nickname } = req.body
+
+    try {
+        const { data, error } = await supabase.from("users").update({ nickname }).eq("id", req.user.userId).select()
+
+        if (error) throw error
+
+        res.json({ message: "Nickname updated successfully", user: data[0] })
+    } catch (error) {
+        res.status(400).json({ error: error.message })
+    }
+})
+
 app.get('/profession-test/:testId', authenticateToken, async (req, res) => {
     const { testId } = req.params;
 
