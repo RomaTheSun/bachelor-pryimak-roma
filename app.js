@@ -240,7 +240,7 @@ app.post("/profession-tests/:testId/questions", authenticateToken, async (req, r
         const { data, error } = await supabase.rpc("add_profession_test_question", {
             p_test_id: testId,
             p_question_text: questionText,
-            p_options: JSON.stringify(options),
+            p_options: options,
         })
 
         if (error) throw error
@@ -255,6 +255,19 @@ app.post("/profession-tests/:testId/questions", authenticateToken, async (req, r
 app.get("/profession-tests", authenticateToken, async (req, res) => {
     try {
         const { data, error } = await supabase.from("profession_tests").select("*")
+
+        if (error) throw error
+
+        res.json(data)
+    } catch (error) {
+        res.status(400).json({ error: error.message })
+    }
+})
+
+//get all profession_descriptions
+app.get("/profession_descriptions", authenticateToken, async (req, res) => {
+    try {
+        const { data, error } = await supabase.from("profession_descriptions").select("*")
 
         if (error) throw error
 
