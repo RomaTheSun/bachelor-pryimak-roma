@@ -232,88 +232,74 @@ app.post('/profession-tests', authenticateToken, async (req, res) => {
 });
 
 // Add a question to a profession test
-app.post('/profession-tests/:testId/questions', authenticateToken, async (req, res) => {
-    const { testId } = req.params;
-    const { question, options } = req.body;
+app.post("/profession-tests/:testId/questions", authenticateToken, async (req, res) => {
+    const { testId } = req.params
+    const { questionText, options } = req.body
 
     try {
-        // First, check if the test exists
-        const { data: testData, error: testError } = await supabase
-            .from('profession_tests')
-            .select('id')
-            .eq('id', testId)
-            .single();
+        const { data, error } = await supabase.rpc("add_profession_test_question", {
+            p_test_id: testId,
+            p_question_text: questionText,
+            p_options: JSON.stringify(options),
+        })
 
-        if (testError) throw testError;
-        if (!testData) throw new Error('Test not found');
+        if (error) throw error
 
-        // If the test exists, add the question
-        const { data, error } = await supabase
-            .from('profession_test_questions')
-            .insert([{ test_id: testId, question, options }])
-            .select();
-
-        if (error) throw error;
-
-        res.status(201).json(data[0]);
+        res.status(201).json({ message: "Question added successfully", questionId: data })
     } catch (error) {
-        res.status(400).json({ error: error.message });
+        res.status(400).json({ error: error.message })
     }
-});
+})
 
-// Get all profession tests or a specific test
-app.get('/profession-tests/:id?', authenticateToken, async (req, res) => {
+// Get all profession tests
+app.get("/profession-tests", authenticateToken, async (req, res) => {
     try {
-        let query = supabase.from('profession_tests').select('*');
+        const { data, error } = await supabase.from("profession_tests").select("*")
 
-        if (req.params.id) {
-            query = query.eq('id', req.params.id).single();
-        }
+        if (error) throw error
 
-        const { data, error } = await query;
-
-        if (error) throw error;
-
-        if (req.params.id && !data) {
-            return res.status(404).json({ message: 'Test not found' });
-        }
-
-        res.json(data);
+        res.json(data)
     } catch (error) {
-        res.status(400).json({ error: error.message });
+        res.status(400).json({ error: error.message })
     }
-});
+})
 
-// Get questions for a specific test
-app.get('/profession-tests/:id/questions', authenticateToken, async (req, res) => {
-    const { id } = req.params;
+// Get a specific profession test with its questions and options
+app.get("/profession-tests/:testId", authenticateToken, async (req, res) => {
+    const { testId } = req.params
 
     try {
-        // First, check if the test exists
-        const { data: testData, error: testError } = await supabase
-            .from('profession_tests')
-            .select('id')
-            .eq('id', id)
-            .single();
+        const { data: test, error: testError } = await supabase
+            .from("profession_tests")
+            .select("*")
+            .eq("id", testId)
+            .single()
 
-        if (testError) throw testError;
-        if (!testData) {
-            return res.status(404).json({ message: 'Test not found' });
-        }
+        if (testError) throw testError
 
-        // If the test exists, fetch its questions
-        const { data, error } = await supabase
-            .from('profession_test_questions')
-            .select('*')
-            .eq('test_id', id);
+        const { data: questions, error: questionsError } = await supabase
+            .from("profession_test_questions")
+            .select(`
+          id,
+          question_text,
+          question_options (
+            id,
+            option_text,
+            option_scores (
+              profession,
+              score
+            )
+          )
+        `)
+            .eq("test_id", testId)
 
-        if (error) throw error;
+        if (questionsError) throw questionsError
 
-        res.json(data);
+        res.json({ ...test, questions })
     } catch (error) {
-        res.status(400).json({ error: error.message });
+        res.status(400).json({ error: error.message })
     }
-});
+})
 
 app.post('/forgot-password', async (req, res) => {
     const { email } = req.body;
