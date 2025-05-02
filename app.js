@@ -3,12 +3,17 @@ require('dotenv').config();
 const { createClient } = require('@supabase/supabase-js');
 const jwt = require('jsonwebtoken');
 const cors = require('cors');
+const swaggerUi = require('swagger-ui-express');
+const swaggerSpec = require('./swagger');
 
 const app = express();
 const port = 3001;
 
 app.use(cors());
 app.use(express.json());
+
+// Setup Swagger UI
+app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 
 const supabaseUrl = process.env.SUPABASE_URL;
 const supabaseKey = process.env.SUPABASE_KEY;
@@ -31,12 +36,52 @@ const authenticateToken = (req, res, next) => {
     });
 };
 
-// User registration
+/**
+ * @swagger
+ * /register:
+ *   post:
+ *     summary: Register a new user
+ *     tags: [Auth]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - email
+ *               - password
+ *               - nickname
+ *               - birth_date
+ *             properties:
+ *               email:
+ *                 type: string
+ *               password:
+ *                 type: string
+ *               nickname:
+ *                 type: string
+ *               birth_date:
+ *                 type: string
+ *                 format: date
+ *     responses:
+ *       201:
+ *         description: User registered successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                 user:
+ *                   type: object
+ *       400:
+ *         description: Error during registration
+ */
 app.post('/register', async (req, res) => {
     const { email, password, nickname, birth_date } = req.body;
 
     try {
-        // Sign up the user using Supabase Auth
         const { data: authData, error: authError } = await supabase.auth.signUp({
             email,
             password,
@@ -44,7 +89,6 @@ app.post('/register', async (req, res) => {
 
         if (authError) throw authError;
 
-        // If auth signup is successful, insert user data into the custom users table
         const { data: userData, error: userError } = await supabase
             .from('users')
             .insert([
@@ -63,7 +107,42 @@ app.post('/register', async (req, res) => {
         res.status(400).json({ error: error.message });
     }
 });
-// User login
+
+/**
+ * @swagger
+ * /login:
+ *   post:
+ *     summary: Login a user
+ *     tags: [Auth]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - email
+ *               - password
+ *             properties:
+ *               email:
+ *                 type: string
+ *               password:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: Login successful, returns access and refresh tokens
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 accessToken:
+ *                   type: string
+ *                 refreshToken:
+ *                   type: string
+ *       400:
+ *         description: Invalid credentials
+ */
 app.post('/login', async (req, res) => {
     const { email, password } = req.body;
 
@@ -84,7 +163,31 @@ app.post('/login', async (req, res) => {
     }
 });
 
-// User sign-out
+/**
+ * @swagger
+ * /signout:
+ *   post:
+ *     summary: Sign out a user
+ *     tags: [Auth]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Sign out successful
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *       400:
+ *         description: Error during sign out
+ *       401:
+ *         description: Unauthorized
+ *       403:
+ *         description: Forbidden
+ */
 app.post('/signout', authenticateToken, async (req, res) => {
     try {
         const { error } = await supabase.auth.signOut();
@@ -97,7 +200,38 @@ app.post('/signout', authenticateToken, async (req, res) => {
     }
 });
 
-// Refresh token
+/**
+ * @swagger
+ * /refresh-token:
+ *   post:
+ *     summary: Refresh access token
+ *     tags: [Auth]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - refreshToken
+ *             properties:
+ *               refreshToken:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: New access token generated
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 accessToken:
+ *                   type: string
+ *       401:
+ *         description: Refresh token missing
+ *       403:
+ *         description: Invalid refresh token
+ */
 app.post('/refresh-token', (req, res) => {
     const { refreshToken } = req.body;
 
@@ -112,7 +246,37 @@ app.post('/refresh-token', (req, res) => {
     });
 });
 
-// Get user data
+/**
+ * @swagger
+ * /user:
+ *   get:
+ *     summary: Get user data
+ *     tags: [User]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: User data retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 id:
+ *                   type: string
+ *                 email:
+ *                   type: string
+ *                 nickname:
+ *                   type: string
+ *                 birth_date:
+ *                   type: string
+ *       400:
+ *         description: Error retrieving user data
+ *       401:
+ *         description: Unauthorized
+ *       403:
+ *         description: Forbidden
+ */
 app.get('/user', authenticateToken, async (req, res) => {
     try {
         const { data, error } = await supabase
@@ -129,7 +293,41 @@ app.get('/user', authenticateToken, async (req, res) => {
     }
 });
 
-// Get user profession results
+/**
+ * @swagger
+ * /user/profession-results:
+ *   get:
+ *     summary: Get user profession test results
+ *     tags: [User]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Profession test results retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: array
+ *               items:
+ *                 type: object
+ *                 properties:
+ *                   id:
+ *                     type: string
+ *                   user_id:
+ *                     type: string
+ *                   test_id:
+ *                     type: string
+ *                   results:
+ *                     type: object
+ *                   created_at:
+ *                     type: string
+ *       400:
+ *         description: Error retrieving results
+ *       401:
+ *         description: Unauthorized
+ *       403:
+ *         description: Forbidden
+ */
 app.get('/user/profession-results', authenticateToken, async (req, res) => {
     try {
         const { data, error } = await supabase
@@ -145,7 +343,41 @@ app.get('/user/profession-results', authenticateToken, async (req, res) => {
     }
 });
 
-// Get user progress
+/**
+ * @swagger
+ * /user/progress:
+ *   get:
+ *     summary: Get user progress
+ *     tags: [User]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: User progress retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: array
+ *               items:
+ *                 type: object
+ *                 properties:
+ *                   id:
+ *                     type: string
+ *                   user_id:
+ *                     type: string
+ *                   course_id:
+ *                     type: string
+ *                   chapter_id:
+ *                     type: string
+ *                   status:
+ *                     type: string
+ *       400:
+ *         description: Error retrieving progress
+ *       401:
+ *         description: Unauthorized
+ *       403:
+ *         description: Forbidden
+ */
 app.get('/user/progress', authenticateToken, async (req, res) => {
     try {
         const { data, error } = await supabase
@@ -161,26 +393,109 @@ app.get('/user/progress', authenticateToken, async (req, res) => {
     }
 });
 
-// Update user nickname
+/**
+ * @swagger
+ * /user/nickname:
+ *   put:
+ *     summary: Update user nickname
+ *     tags: [User]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - nickname
+ *             properties:
+ *               nickname:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: Nickname updated successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                 user:
+ *                   type: object
+ *       400:
+ *         description: Error updating nickname
+ *       401:
+ *         description: Unauthorized
+ *       403:
+ *         description: Forbidden
+ */
 app.put("/user/nickname", authenticateToken, async (req, res) => {
-    const { nickname } = req.body
+    const { nickname } = req.body;
 
     try {
-        const { data, error } = await supabase.from("users").update({ nickname }).eq("id", req.user.userId).select()
+        const { data, error } = await supabase.from("users").update({ nickname }).eq("id", req.user.userId).select();
 
-        if (error) throw error
+        if (error) throw error;
 
-        res.json({ message: "Nickname updated successfully", user: data[0] })
+        res.json({ message: "Nickname updated successfully", user: data[0] });
     } catch (error) {
-        res.status(400).json({ error: error.message })
+        res.status(400).json({ error: error.message });
     }
-})
+});
 
+/**
+ * @swagger
+ * /profession-test/{testId}:
+ *   get:
+ *     summary: Get a profession test with questions
+ *     tags: [Profession Tests]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: testId
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: ID of the profession test
+ *     responses:
+ *       200:
+ *         description: Profession test retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 id:
+ *                   type: string
+ *                 title:
+ *                   type: string
+ *                 description:
+ *                   type: string
+ *                 questions:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       id:
+ *                         type: string
+ *                       question_text:
+ *                         type: string
+ *       400:
+ *         description: Error retrieving test
+ *       401:
+ *         description: Unauthorized
+ *       403:
+ *         description: Forbidden
+ *       404:
+ *         description: Test not found
+ */
 app.get('/profession-test/:testId', authenticateToken, async (req, res) => {
     const { testId } = req.params;
 
     try {
-        // Fetch the profession test
         const { data: testData, error: testError } = await supabase
             .from('profession_tests')
             .select('*')
@@ -193,7 +508,6 @@ app.get('/profession-test/:testId', authenticateToken, async (req, res) => {
             return res.status(404).json({ error: 'Profession test not found' });
         }
 
-        // Fetch the questions for this test
         const { data: questionsData, error: questionsError } = await supabase
             .from('profession_test_questions')
             .select('*')
@@ -201,7 +515,6 @@ app.get('/profession-test/:testId', authenticateToken, async (req, res) => {
 
         if (questionsError) throw questionsError;
 
-        // Combine test data with questions
         const testWithQuestions = {
             ...testData,
             questions: questionsData
@@ -213,7 +526,49 @@ app.get('/profession-test/:testId', authenticateToken, async (req, res) => {
     }
 });
 
-// Create a new profession test
+/**
+ * @swagger
+ * /profession-tests:
+ *   post:
+ *     summary: Create a new profession test
+ *     tags: [Profession Tests]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - title
+ *               - description
+ *             properties:
+ *               title:
+ *                 type: string
+ *               description:
+ *                 type: string
+ *     responses:
+ *       201:
+ *         description: Profession test created successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 id:
+ *                   type: string
+ *                 title:
+ *                   type: string
+ *                 description:
+ *                   type: string
+ *       400:
+ *         description: Error creating test
+ *       401:
+ *         description: Unauthorized
+ *       403:
+ *         description: Forbidden
+ */
 app.post('/profession-tests', authenticateToken, async (req, res) => {
     const { title, description } = req.body;
 
@@ -231,89 +586,386 @@ app.post('/profession-tests', authenticateToken, async (req, res) => {
     }
 });
 
-// Add a question to a profession test
+/**
+ * @swagger
+ * /profession-tests/{testId}/questions:
+ *   post:
+ *     summary: Add a question to a profession test
+ *     tags: [Profession Tests]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: testId
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: ID of the profession test
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - questionText
+ *               - options
+ *             properties:
+ *               questionText:
+ *                 type: string
+ *               options:
+ *                 type: array
+ *                 items:
+ *                   type: object
+ *     responses:
+ *       201:
+ *         description: Question added successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                 questionId:
+ *                   type: string
+ *       400:
+ *         description: Error adding question
+ *       401:
+ *         description: Unauthorized
+ *       403:
+ *         description: Forbidden
+ */
 app.post("/profession-tests/:testId/questions", authenticateToken, async (req, res) => {
-    const { testId } = req.params
-    const { questionText, options } = req.body
+    const { testId } = req.params;
+    const { questionText, options } = req.body;
 
     try {
         const { data, error } = await supabase.rpc("add_profession_test_question", {
             p_test_id: testId,
             p_question_text: questionText,
             p_options: options,
-        })
+        });
 
-        if (error) throw error
+        if (error) throw error;
 
-        res.status(201).json({ message: "Question added successfully", questionId: data })
+        res.status(201).json({ message: "Question added successfully", questionId: data });
     } catch (error) {
-        res.status(400).json({ error: error.message })
+        res.status(400).json({ error: error.message });
     }
-})
+});
 
-// Get all profession tests
+/**
+ * @swagger
+ * /profession-tests:
+ *   get:
+ *     summary: Get all profession tests
+ *     tags: [Profession Tests]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: List of profession tests
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: array
+ *               items:
+ *                 type: object
+ *                 properties:
+ *                   id:
+ *                     type: string
+ *                   title:
+ *                     type: string
+ *                   description:
+ *                     type: string
+ *       400:
+ *         description: Error retrieving tests
+ *       401:
+ *         description: Unauthorized
+ *       403:
+ *         description: Forbidden
+ */
 app.get("/profession-tests", authenticateToken, async (req, res) => {
     try {
-        const { data, error } = await supabase.from("profession_tests").select("*")
+        const { data, error } = await supabase.from("profession_tests").select("*");
 
-        if (error) throw error
+        if (error) throw error;
 
-        res.json(data)
+        res.json(data);
     } catch (error) {
-        res.status(400).json({ error: error.message })
+        res.status(400).json({ error: error.message });
     }
-})
+});
 
-//get all profession_descriptions
+/**
+ * @swagger
+ * /profession_descriptions:
+ *   get:
+ *     summary: Get all profession descriptions
+ *     tags: [Profession Tests]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: List of profession descriptions
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: array
+ *               items:
+ *                 type: object
+ *                 properties:
+ *                   id:
+ *                     type: string
+ *                   name:
+ *                     type: string
+ *                   description:
+ *                     type: string
+ *       400:
+ *         description: Error retrieving descriptions
+ *       401:
+ *         description: Unauthorized
+ *       403:
+ *         description: Forbidden
+ */
 app.get("/profession_descriptions", authenticateToken, async (req, res) => {
     try {
-        const { data, error } = await supabase.from("profession_descriptions").select("*")
+        const { data, error } = await supabase.from("profession_descriptions").select("*");
 
-        if (error) throw error
+        if (error) throw error;
 
-        res.json(data)
+        res.json(data);
     } catch (error) {
-        res.status(400).json({ error: error.message })
+        res.status(400).json({ error: error.message });
     }
-})
+});
 
-// Get a specific profession test with its questions and options
+/**
+ * @swagger
+ * /profession-tests/{testId}:
+ *   get:
+ *     summary: Get a specific profession test with questions and options
+ *     tags: [Profession Tests]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: testId
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: ID of the profession test
+ *     responses:
+ *       200:
+ *         description: Profession test with questions retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 id:
+ *                   type: string
+ *                 title:
+ *                   type: string
+ *                 description:
+ *                   type: string
+ *                 questions:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       id:
+ *                         type: string
+ *                       question_text:
+ *                         type: string
+ *                       question_options:
+ *                         type: array
+ *                         items:
+ *                           type: object
+ *                           properties:
+ *                             id:
+ *                               type: string
+ *                             option_text:
+ *                               type: string
+ *                             option_scores:
+ *                               type: array
+ *                               items:
+ *                                 type: object
+ *                                 properties:
+ *                                   profession:
+ *                                     type: string
+ *                                   score:
+ *                                     type: number
+ *       400:
+ *         description: Error retrieving test
+ *       401:
+ *         description: Unauthorized
+ *       403:
+ *         description: Forbidden
+ */
 app.get("/profession-tests/:testId", authenticateToken, async (req, res) => {
-    const { testId } = req.params
+    const { testId } = req.params;
 
     try {
         const { data: test, error: testError } = await supabase
             .from("profession_tests")
             .select("*")
             .eq("id", testId)
-            .single()
+            .single();
 
-        if (testError) throw testError
+        if (testError) throw testError;
 
         const { data: questions, error: questionsError } = await supabase
             .from("profession_test_questions")
             .select(`
-          id,
-          question_text,
-          question_options (
-            id,
-            option_text,
-            option_scores (
-              profession,
-              score
-            )
-          )
-        `)
-            .eq("test_id", testId)
+                id,
+                question_text,
+                question_options (
+                    id,
+                    option_text,
+                    option_scores (
+                        profession,
+                        score
+                    )
+                )
+            `)
+            .eq("test_id", testId);
 
-        if (questionsError) throw questionsError
+        if (questionsError) throw questionsError;
 
-        res.json({ ...test, questions })
+        res.json({ ...test, questions });
     } catch (error) {
-        res.status(400).json({ error: error.message })
+        res.status(400).json({ error: error.message });
     }
-})
+});
 
+/**
+ * @swagger
+ * /profession-tests/{testId}/results:
+ *   post:
+ *     summary: Save profession test results
+ *     tags: [Profession Tests]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: testId
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: ID of the profession test
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - results
+ *             properties:
+ *               results:
+ *                 type: object
+ *                 description: JSON object containing test results (e.g., profession scores)
+ *     responses:
+ *       201:
+ *         description: Test results saved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                 result:
+ *                   type: object
+ *                   properties:
+ *                     id:
+ *                       type: string
+ *                     user_id:
+ *                       type: string
+ *                     test_id:
+ *                       type: string
+ *                     results:
+ *                       type: object
+ *                     created_at:
+ *                       type: string
+ *       400:
+ *         description: Invalid input or test not found
+ *       401:
+ *         description: Unauthorized
+ *       403:
+ *         description: Forbidden
+ */
+app.post('/profession-tests/:testId/results', authenticateToken, async (req, res) => {
+    const { testId } = req.params;
+    const { results } = req.body;
+
+    try {
+        if (!results) {
+            return res.status(400).json({ error: 'Results are required' });
+        }
+
+        const { data: testData, error: testError } = await supabase
+            .from('profession_tests')
+            .select('id')
+            .eq('id', testId)
+            .single();
+
+        if (testError || !testData) {
+            return res.status(404).json({ error: 'Profession test not found' });
+        }
+
+        const { data, error } = await supabase
+            .from('user_profession_results')
+            .insert([
+                {
+                    user_id: req.user.userId,
+                    test_id: testId,
+                    results: results,
+                    created_at: new Date().toISOString()
+                }
+            ])
+            .select();
+
+        if (error) throw error;
+
+        res.status(201).json({ message: 'Test results saved successfully', result: data[0] });
+    } catch (error) {
+        res.status(400).json({ error: error.message });
+    }
+});
+
+/**
+ * @swagger
+ * /forgot-password:
+ *   post:
+ *     summary: Request password reset
+ *     tags: [Auth]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - email
+ *             properties:
+ *               email:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: Password reset email sent successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *       400:
+ *         description: Error sending reset email
+ */
 app.post('/forgot-password', async (req, res) => {
     const { email } = req.body;
 
@@ -323,13 +975,42 @@ app.post('/forgot-password', async (req, res) => {
         });
 
         if (error) throw error;
-
         res.json({ message: 'Password reset email sent successfully' });
     } catch (error) {
         res.status(400).json({ error: error.message });
     }
 });
 
+/**
+ * @swagger
+ * /reset-password:
+ *   post:
+ *     summary: Reset user password
+ *     tags: [Auth]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - new_password
+ *             properties:
+ *               new_password:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: Password updated successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *       400:
+ *         description: Error resetting password
+ */
 app.post('/reset-password', async (req, res) => {
     const { new_password } = req.body;
 
@@ -346,7 +1027,49 @@ app.post('/reset-password', async (req, res) => {
     }
 });
 
-// Create a new course
+/**
+ * @swagger
+ * /courses:
+ *   post:
+ *     summary: Create a new course
+ *     tags: [Courses]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - title
+ *               - description
+ *             properties:
+ *               title:
+ *                 type: string
+ *               description:
+ *                 type: string
+ *     responses:
+ *       201:
+ *         description: Course created successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 id:
+ *                   type: string
+ *                 title:
+ *                   type: string
+ *                 description:
+ *                   type: string
+ *       400:
+ *         description: Error creating course
+ *       401:
+ *         description: Unauthorized
+ *       403:
+ *         description: Forbidden
+ */
 app.post('/courses', authenticateToken, async (req, res) => {
     const { title, description } = req.body;
 
@@ -364,7 +1087,68 @@ app.post('/courses', authenticateToken, async (req, res) => {
     }
 });
 
-// Create a new chapter for a course
+/**
+ * @swagger
+ * /courses/{courseId}/chapters:
+ *   post:
+ *     summary: Create a new chapter for a course
+ *     tags: [Courses]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: courseId
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: ID of the course
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - title
+ *               - description
+ *               - main_information
+ *               - order_in_course
+ *             properties:
+ *               title:
+ *                 type: string
+ *               description:
+ *                 type: string
+ *               main_information:
+ *                 type: string
+ *               order_in_course:
+ *                 type: integer
+ *     responses:
+ *       201:
+ *         description: Chapter created successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 id:
+ *                   type: string
+ *                 course_id:
+ *                   type: string
+ *                 title:
+ *                   type: string
+ *                 description:
+ *                   type: string
+ *                 main_information:
+ *                   type: string
+ *                 order_in_course:
+ *                   type: integer
+ *       400:
+ *         description: Error creating chapter
+ *       401:
+ *         description: Unauthorized
+ *       403:
+ *         description: Forbidden
+ */
 app.post('/courses/:courseId/chapters', authenticateToken, async (req, res) => {
     const { courseId } = req.params;
     const { title, description, main_information, order_in_course } = req.body;
@@ -389,7 +1173,62 @@ app.post('/courses/:courseId/chapters', authenticateToken, async (req, res) => {
     }
 });
 
-// Create questions for a chapter
+/**
+ * @swagger
+ * /chapters/{chapterId}/questions:
+ *   post:
+ *     summary: Create questions for a chapter
+ *     tags: [Courses]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: chapterId
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: ID of the chapter
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - question
+ *               - options
+ *             properties:
+ *               question:
+ *                 type: object
+ *               options:
+ *                 type: array
+ *                 items:
+ *                   type: object
+ *     responses:
+ *       201:
+ *         description: Questions created successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 id:
+ *                   type: string
+ *                 chapter_id:
+ *                   type: string
+ *                 question:
+ *                   type: object
+ *                 options:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *       400:
+ *         description: Error creating questions
+ *       401:
+ *         description: Unauthorized
+ *       403:
+ *         description: Forbidden
+ */
 app.post('/chapters/:chapterId/questions', authenticateToken, async (req, res) => {
     const { chapterId } = req.params;
     const { question, options } = req.body;
@@ -412,7 +1251,37 @@ app.post('/chapters/:chapterId/questions', authenticateToken, async (req, res) =
     }
 });
 
-// Get all courses
+/**
+ * @swagger
+ * /courses:
+ *   get:
+ *     summary: Get all courses
+ *     tags: [Courses]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: List of courses
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: array
+ *               items:
+ *                 type: object
+ *                 properties:
+ *                   id:
+ *                     type: string
+ *                   title:
+ *                     type: string
+ *                   description:
+ *                     type: string
+ *       400:
+ *         description: Error retrieving courses
+ *       401:
+ *         description: Unauthorized
+ *       403:
+ *         description: Forbidden
+ */
 app.get('/courses', authenticateToken, async (req, res) => {
     try {
         const { data, error } = await supabase
@@ -427,7 +1296,59 @@ app.get('/courses', authenticateToken, async (req, res) => {
     }
 });
 
-// Get a specific course with its chapters
+/**
+ * @swagger
+ * /courses/{courseId}:
+ *   get:
+ *     summary: Get a specific course with its chapters
+ *     tags: [Courses]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: courseId
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: ID of the course
+ *     responses:
+ *       200:
+ *         description: Course with chapters retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 id:
+ *                   type: string
+ *                 title:
+ *                   type: string
+ *                 description:
+ *                   type: string
+ *                 chapters:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       id:
+ *                         type: string
+ *                       course_id:
+ *                         type: string
+ *                       title:
+ *                         type: string
+ *                       description:
+ *                         type: string
+ *                       main_information:
+ *                         type: string
+ *                       order_in_course:
+ *                         type: integer
+ *       400:
+ *         description: Error retrieving course
+ *       401:
+ *         description: Unauthorized
+ *       403:
+ *         description: Forbidden
+ */
 app.get('/courses/:courseId', authenticateToken, async (req, res) => {
     const { courseId } = req.params;
 
@@ -454,7 +1375,46 @@ app.get('/courses/:courseId', authenticateToken, async (req, res) => {
     }
 });
 
-// Get questions for a specific chapter
+/**
+ * @swagger
+ * /chapters/{chapterId}/questions:
+ *   get:
+ *     summary: Get questions for a specific chapter
+ *     tags: [Courses]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: chapterId
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: ID of the chapter
+ *     responses:
+ *       200:
+ *         description: Chapter questions retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 id:
+ *                   type: string
+ *                 chapter_id:
+ *                   type: string
+ *                 question:
+ *                   type: object
+ *                 options:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *       400:
+ *         description: Error retrieving questions
+ *       401:
+ *         description: Unauthorized
+ *       403:
+ *         description: Forbidden
+ */
 app.get('/chapters/:chapterId/questions', authenticateToken, async (req, res) => {
     const { chapterId } = req.params;
 
@@ -473,12 +1433,28 @@ app.get('/chapters/:chapterId/questions', authenticateToken, async (req, res) =>
     }
 });
 
+/**
+ * @swagger
+ * /:
+ *   get:
+ *     summary: Welcome message
+ *     tags: [General]
+ *     responses:
+ *       200:
+ *         description: Welcome message
+ *         content:
+ *           text/plain:
+ *             schema:
+ *               type: string
+ */
 app.get('/', (req, res) => {
     res.send('Welcome to your Express App!');
 });
 
 app.listen(port, () => {
     console.log(`Server is running on http://localhost:${port}`);
+    console.log(`Swagger UI available at http://localhost:${port}/api-docs`);
 });
 
-export default app
+module.exports = app;
+
