@@ -1,87 +1,104 @@
--- 1. Create Users table
-CREATE TABLE
-    users (
-        id UUID PRIMARY KEY DEFAULT gen_random_uuid (),
-        nickname TEXT NOT NULL,
-        email TEXT UNIQUE NOT NULL,
-        password TEXT NOT NULL,
-        profile_picture TEXT,
-        created_at TIMESTAMP
-        WITH
-            TIME ZONE DEFAULT CURRENT_TIMESTAMP
-    );
+-- Створення таблиці courses
+CREATE TABLE courses (
+    id UUID PRIMARY KEY,
+    title TEXT NOT NULL,
+    description TEXT NOT NULL,
+    created_at TIMESTAMPTZ NOT NULL
+);
 
--- 2. Create Profession Test tables
-CREATE TABLE
-    profession_tests (
-        id UUID PRIMARY KEY DEFAULT gen_random_uuid (),
-        title TEXT NOT NULL,
-        description TEXT
-    );
+-- Створення таблиці chapters
+CREATE TABLE chapters (
+    id UUID PRIMARY KEY,
+    course_id UUID NOT NULL,
+    title TEXT NOT NULL,
+    description TEXT NOT NULL,
+    main_information TEXT NOT NULL,
+    order_in_course INTEGER NOT NULL,
+    FOREIGN KEY (course_id) REFERENCES courses(id)
+);
 
-CREATE TABLE
-    profession_test_questions (
-        id UUID PRIMARY KEY DEFAULT gen_random_uuid (),
-        test_id UUID REFERENCES profession_tests (id),
-        question TEXT NOT NULL,
-        options JSONB
-    );
+-- Створення таблиці users
+CREATE TABLE users (
+    id UUID PRIMARY KEY,
+    nickname TEXT NOT NULL,
+    email TEXT NOT NULL,
+    profile_picture TEXT,
+    created_at TIMESTAMPTZ NOT NULL,
+    birth_date DATE
+);
 
-CREATE TABLE
-    user_profession_results (
-        id UUID PRIMARY KEY DEFAULT gen_random_uuid (),
-        user_id UUID REFERENCES users (id),
-        test_id UUID REFERENCES profession_tests (id),
-        result JSONB,
-        taken_at TIMESTAMP
-        WITH
-            TIME ZONE DEFAULT CURRENT_TIMESTAMP
-    );
+-- Створення таблиці profession_descriptions
+CREATE TABLE profession_descriptions (
+    id UUID PRIMARY KEY,
+    profession TEXT NOT NULL,
+    title TEXT NOT NULL,
+    description TEXT NOT NULL
+);
 
--- 3. Create Courses related tables
-CREATE TABLE
-    courses (
-        id UUID PRIMARY KEY DEFAULT gen_random_uuid (),
-        title TEXT NOT NULL,
-        description TEXT,
-        created_at TIMESTAMP
-        WITH
-            TIME ZONE DEFAULT CURRENT_TIMESTAMP
-    );
+-- Створення таблиці profession_test
+CREATE TABLE profession_test (
+    id UUID PRIMARY KEY,
+    title TEXT NOT NULL,
+    description TEXT NOT NULL
+);
 
-CREATE TABLE
-    chapters (
-        id UUID PRIMARY KEY DEFAULT gen_random_uuid (),
-        course_id UUID REFERENCES courses (id),
-        title TEXT NOT NULL,
-        description TEXT,
-        main_information TEXT,
-        order_in_course INT NOT NULL
-    );
+-- Створення таблиці chapter_tests
+CREATE TABLE chapter_tests (
+    id UUID PRIMARY KEY,
+    course_id UUID NOT NULL,
+    chapter_id UUID NOT NULL,
+    question_text TEXT NOT NULL,
+    options JSONB NOT NULL,
+    FOREIGN KEY (course_id) REFERENCES courses(id),
+    FOREIGN KEY (chapter_id) REFERENCES chapters(id)
+);
 
-CREATE TABLE
-    chapter_tests (
-        id UUID PRIMARY KEY DEFAULT gen_random_uuid (),
-        chapter_id UUID REFERENCES chapters (id),
-        questions JSONB
-    );
+-- Створення таблиці question_options
+CREATE TABLE question_options (
+    id UUID PRIMARY KEY,
+    question_id UUID NOT NULL,
+    option_text TEXT NOT NULL,
+    FOREIGN KEY (question_id) REFERENCES chapter_tests(id)
+);
 
-CREATE TABLE
-    user_progress (
-        id UUID PRIMARY KEY DEFAULT gen_random_uuid (),
-        user_id UUID REFERENCES users (id),
-        course_id UUID REFERENCES courses (id),
-        chapter_id UUID REFERENCES chapters (id),
-        completed BOOLEAN DEFAULT FALSE,
-        test_score FLOAT,
-        last_accessed TIMESTAMP
-        WITH
-            TIME ZONE DEFAULT CURRENT_TIMESTAMP
-    );
+-- Створення таблиці option_scores
+CREATE TABLE option_scores (
+    id UUID PRIMARY KEY,
+    option_id UUID NOT NULL,
+    profession TEXT NOT NULL,
+    score INTEGER NOT NULL,
+    FOREIGN KEY (option_id) REFERENCES question_options(id)
+);
 
--- Add indexes for better query performance
-CREATE INDEX idx_user_email ON users (email);
+-- Створення таблиці profession_test_questions
+CREATE TABLE profession_test_questions (
+    id UUID PRIMARY KEY,
+    test_id UUID NOT NULL,
+    question_text TEXT NOT NULL,
+    FOREIGN KEY (test_id) REFERENCES profession_test(id)
+);
 
-CREATE INDEX idx_chapter_course ON chapters (course_id);
+-- Створення таблиці user_profession_results
+CREATE TABLE user_profession_results (
+    id UUID PRIMARY KEY,
+    user_id UUID NOT NULL,
+    test_id UUID NOT NULL,
+    result TEXT NOT NULL,
+    taken_at TIMESTAMPTZ NOT NULL,
+    FOREIGN KEY (user_id) REFERENCES users(id),
+    FOREIGN KEY (test_id) REFERENCES profession_test(id)
+);
 
-CREATE INDEX idx_user_progress ON user_progress (user_id, course_id);
+-- Створення таблиці user_progress
+CREATE TABLE user_progress (
+    id UUID PRIMARY KEY,
+    user_id UUID NOT NULL,
+    course_id UUID NOT NULL,
+    chapter_id UUID NOT NULL,
+    completed BOOLEAN NOT NULL,
+    test_score INTEGER,
+    last_accessed_at TIMESTAMPTZ,
+    FOREIGN KEY (user_id) REFERENCES users(id),
+    FOREIGN KEY (course_id) REFERENCES courses(id),
+    FOREIGN KEY (chapter_id) REFERENCES chapters(id)
+);
