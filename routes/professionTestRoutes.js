@@ -47,6 +47,7 @@ router.post('/profession-tests', authenticateToken, professionTestController.cre
  *         required: true
  *         schema:
  *           type: string
+ *           format: uuid
  *         description: ID of the profession test
  *     requestBody:
  *       required: true
@@ -60,15 +61,80 @@ router.post('/profession-tests', authenticateToken, professionTestController.cre
  *             properties:
  *               questionText:
  *                 type: string
+ *                 example: "Як ви зазвичай реагуєте в критичних ситуаціях?"
  *               options:
  *                 type: array
  *                 items:
  *                   type: object
+ *                   required:
+ *                     - text
+ *                     - scores
+ *                   properties:
+ *                     text:
+ *                       type: string
+ *                       example: "Швидко приймаю рішення та дію"
+ *                     scores:
+ *                       type: object
+ *                       required:
+ *                         - combat_officer
+ *                         - logistics_officer
+ *                         - intelligence_officer
+ *                         - medical_officer
+ *                         - engineering_officer
+ *                       properties:
+ *                         combat_officer:
+ *                           type: integer
+ *                           minimum: 0
+ *                           maximum: 10
+ *                           example: 10
+ *                         logistics_officer:
+ *                           type: integer
+ *                           minimum: 0
+ *                           maximum: 10
+ *                           example: 5
+ *                         intelligence_officer:
+ *                           type: integer
+ *                           minimum: 0
+ *                           maximum: 10
+ *                           example: 7
+ *                         medical_officer:
+ *                           type: integer
+ *                           minimum: 0
+ *                           maximum: 10
+ *                           example: 6
+ *                         engineering_officer:
+ *                           type: integer
+ *                           minimum: 0
+ *                           maximum: 10
+ *                           example: 4
  *     responses:
  *       201:
  *         description: Question added successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Question added successfully"
+ *                 questionId:
+ *                   type: string
+ *                   format: uuid
+ *                   example: "123e4567-e89b-12d3-a456-426614174000"
  *       400:
  *         description: Error adding question
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 error:
+ *                   type: string
+ *       401:
+ *         description: Unauthorized
+ *       403:
+ *         description: Forbidden
  */
 router.post('/profession-tests/:testId/questions', authenticateToken, professionTestController.addQuestion);
 

@@ -9,7 +9,6 @@ const professionTestRoutes = require('./routes/professionTestRoutes');
 const courseRoutes = require('./routes/courseRoutes');
 
 const app = express();
-const port = process.env.PORT || 3001;
 
 // Middleware
 app.use(cors());
@@ -27,12 +26,6 @@ app.use('/api', courseRoutes);
 // Welcome route
 app.get('/', (req, res) => {
     res.send('Welcome to your Express App!');
-});
-
-// Start server
-app.listen(port, () => {
-    console.log(`Server is running on http://localhost:${port}`);
-    console.log(`Swagger UI available at http://localhost:${port}/api-docs`);
 });
 
 module.exports = app;

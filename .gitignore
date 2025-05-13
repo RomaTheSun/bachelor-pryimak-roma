@@ -1,2 +1,5 @@
 .env
 .vercel
+/node_modules
+.env.test
+.env.build
