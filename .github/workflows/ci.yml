@@ -56,8 +56,24 @@ jobs:
       - name: Install Vercel CLI
         run: npm install -g vercel
 
+      - name: Debug environment variables
+        run: |
+          echo "SUPABASE_URL: $SUPABASE_URL"
+          echo "SUPABASE_KEY: $SUPABASE_KEY"
+          echo "JWT_SECRET: $JWT_SECRET"
+          echo "VERCEL_TOKEN: $(echo $VERCEL_TOKEN | wc -c) characters"
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
+          JWT_SECRET: ${{ secrets.JWT_SECRET }}
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+
       - name: Deploy to Vercel
         run: vercel --prod --token ${{ secrets.VERCEL_TOKEN }}
         env:
           VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
           VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
+          JWT_SECRET: ${{ secrets.JWT_SECRET }}
+          JWT_REFRESH_SECRET: ${{ secrets.JWT_REFRESH_SECRET }}
